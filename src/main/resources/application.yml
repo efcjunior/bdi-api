@@ -11,6 +11,17 @@ bdi-api:
     interval: PT6H
     stale-after: PT12H
     job-retention: P7D
+  security:
+    refresh-token-ttl: P7D
+    jwt:
+      issuer: ${JWT_ISSUER:https://api.coding4world.com/bdi}
+      audience: ${JWT_AUDIENCE:bdi-api}
+      access-token-ttl: PT15M
+      public-key: ${JWT_PUBLIC_KEY:}
+      private-key: ${JWT_PRIVATE_KEY:}
+    bootstrap-admin:
+      email: ${BOOTSTRAP_ADMIN_EMAIL:}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:}
 
 management:
   endpoints:

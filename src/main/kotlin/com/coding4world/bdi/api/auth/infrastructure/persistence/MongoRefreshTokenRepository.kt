@@ -4,7 +4,12 @@ import com.coding4world.bdi.api.auth.domain.model.RefreshToken
 import com.coding4world.bdi.api.auth.domain.port.RefreshTokenRepository
 import com.coding4world.bdi.api.shared.persistence.toMongoPrecision
 import org.springframework.data.mongodb.repository.MongoRepository
+import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.query.Criteria
+import org.springframework.data.mongodb.core.query.Query
+import org.springframework.data.mongodb.core.query.Update
 import org.springframework.stereotype.Repository
+import java.time.Instant
 
 internal interface SpringDataRefreshTokenRepository : MongoRepository<RefreshTokenDocument, String> {
     fun findByTokenHash(tokenHash: String): RefreshTokenDocument?
@@ -15,6 +20,7 @@ internal interface SpringDataRefreshTokenRepository : MongoRepository<RefreshTok
 @Repository
 internal class MongoRefreshTokenRepository(
     private val repository: SpringDataRefreshTokenRepository,
+    private val mongoTemplate: MongoTemplate,
 ) : RefreshTokenRepository {
     override fun save(token: RefreshToken): RefreshToken = repository.save(token.toDocument()).toDomain()
 
@@ -22,6 +28,29 @@ internal class MongoRefreshTokenRepository(
 
     override fun findAllByFamilyId(familyId: String): List<RefreshToken> =
         repository.findAllByFamilyId(familyId).map(RefreshTokenDocument::toDomain)
+
+    override fun revokeIfActive(
+        tokenHash: String,
+        revokedAt: Instant,
+        replacementTokenHash: String?,
+    ): Boolean {
+        val query =
+            Query.query(
+                Criteria.where("tokenHash").`is`(tokenHash).and("revokedAt").`is`(null),
+            )
+        val update = Update().set("revokedAt", revokedAt.toMongoPrecision())
+        replacementTokenHash?.let { update.set("replacementTokenHash", it) }
+        return mongoTemplate.updateFirst(query, update, RefreshTokenDocument::class.java).modifiedCount == 1L
+    }
+
+    override fun revokeFamily(
+        familyId: String,
+        revokedAt: Instant,
+    ): Long {
+        val query = Query.query(Criteria.where("familyId").`is`(familyId).and("revokedAt").`is`(null))
+        val update = Update().set("revokedAt", revokedAt.toMongoPrecision())
+        return mongoTemplate.updateMulti(query, update, RefreshTokenDocument::class.java).modifiedCount
+    }
 }
 
 private fun RefreshToken.toDocument() =

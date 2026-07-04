@@ -36,6 +36,19 @@ Start MongoDB, then run:
 The application health endpoint is available at
 `http://localhost:8080/actuator/health`.
 
+## Security configuration
+
+Production requires an RSA key pair supplied through `JWT_PUBLIC_KEY` and
+`JWT_PRIVATE_KEY`. The public key must use X.509 PEM format and the private key
+must use unencrypted PKCS#8 PEM format. Newlines may be supplied directly or as
+escaped `\n` sequences.
+
+The initial administrator is created only when no administrator exists. Set
+`BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` together; the password
+must contain at least 12 characters. Remove these variables after the account
+has been created. The `local` and `test` profiles use ephemeral RSA keys and
+must not be used in production.
+
 ## Verify
 
 ```shell

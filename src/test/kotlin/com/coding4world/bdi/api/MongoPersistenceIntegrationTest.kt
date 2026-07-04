@@ -149,6 +149,40 @@ class MongoPersistenceIntegrationTest {
         assertThat(snapshotRepository.findLatest()?.id).isEqualTo(completedJob?.snapshotId)
     }
 
+    @Test
+    fun `refresh token consumption and family revocation are atomic in MongoDB`() {
+        val now = Instant.parse("2026-07-10T12:00:00Z")
+        refreshTokenRepository.save(
+            RefreshToken(
+                tokenHash = "rotation-token-1",
+                familyId = "rotation-family",
+                userId = "user-1",
+                expiresAt = now.plusSeconds(3600),
+            ),
+        )
+        refreshTokenRepository.save(
+            RefreshToken(
+                tokenHash = "rotation-token-2",
+                familyId = "rotation-family",
+                userId = "user-1",
+                expiresAt = now.plusSeconds(3600),
+            ),
+        )
+
+        val firstConsumption =
+            refreshTokenRepository.revokeIfActive("rotation-token-1", now, "rotation-token-2")
+        val repeatedConsumption =
+            refreshTokenRepository.revokeIfActive("rotation-token-1", now, "unexpected-replacement")
+        refreshTokenRepository.revokeFamily("rotation-family", now)
+
+        assertThat(firstConsumption).isTrue()
+        assertThat(repeatedConsumption).isFalse()
+        assertThat(refreshTokenRepository.findByTokenHash("rotation-token-1")?.replacementTokenHash)
+            .isEqualTo("rotation-token-2")
+        assertThat(refreshTokenRepository.findAllByFamilyId("rotation-family"))
+            .allMatch { it.revokedAt == now }
+    }
+
     private fun indexNames(type: Class<*>): List<String> = mongoTemplate.indexOps(type).indexInfo.map { it.name }
 
     companion object {

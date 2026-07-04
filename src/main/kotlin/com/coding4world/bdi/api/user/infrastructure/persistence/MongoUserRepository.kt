@@ -5,6 +5,7 @@ import com.coding4world.bdi.api.user.domain.model.UserRole
 import com.coding4world.bdi.api.user.domain.port.UserRepository
 import com.coding4world.bdi.api.shared.persistence.toMongoPrecision
 import org.springframework.data.mongodb.repository.MongoRepository
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Repository
 
 internal interface SpringDataUserRepository : MongoRepository<UserDocument, String> {
@@ -21,6 +22,8 @@ internal class MongoUserRepository(
 
     override fun findByNormalizedEmail(normalizedEmail: String): User? =
         repository.findByNormalizedEmail(normalizedEmail)?.toDomain()
+
+    override fun findById(id: String): User? = repository.findByIdOrNull(id)?.toDomain()
 
     override fun existsByRole(role: UserRole): Boolean = repository.existsByRolesContaining(role)
 }

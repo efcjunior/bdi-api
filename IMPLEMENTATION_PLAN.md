@@ -151,7 +151,7 @@ Implementation progress:
 - [x] Domain and MongoDB
 - [x] BDI integration
 - [x] Asynchronous synchronization
-- [ ] Security
+- [x] Security
 - [ ] REST API
 - [ ] Rate limiting
 - [ ] Delivery tooling
