@@ -2,3 +2,7 @@ spring:
   data:
     mongodb:
       database: bdi-api-test
+
+bdi-api:
+  synchronization:
+    enabled: false

@@ -8,8 +8,9 @@ data class BdiApiProperties(
     val synchronization: Synchronization = Synchronization(),
 ) {
     data class Synchronization(
+        val enabled: Boolean = true,
         val interval: Duration = Duration.ofHours(6),
         val staleAfter: Duration = Duration.ofHours(12),
+        val jobRetention: Duration = Duration.ofDays(7),
     )
 }
-

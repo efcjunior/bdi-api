@@ -2,12 +2,15 @@ package com.coding4world.bdi.api
 
 import com.coding4world.bdi.api.auth.domain.model.RefreshToken
 import com.coding4world.bdi.api.auth.domain.port.RefreshTokenRepository
+import com.coding4world.bdi.api.bdi.application.BdiRefreshJobProcessor
+import com.coding4world.bdi.api.bdi.domain.model.BdiPublication
 import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshJob
 import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshJobStatus
 import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshTrigger
 import com.coding4world.bdi.api.bdi.domain.model.BdiSnapshot
 import com.coding4world.bdi.api.bdi.domain.port.BdiRefreshJobRepository
 import com.coding4world.bdi.api.bdi.domain.port.BdiSnapshotRepository
+import com.coding4world.bdi.api.bdi.domain.port.CurrentBdiProvider
 import com.coding4world.bdi.api.bdi.infrastructure.persistence.BdiRefreshJobDocument
 import com.coding4world.bdi.api.bdi.infrastructure.persistence.BdiSnapshotDocument
 import com.coding4world.bdi.api.user.domain.model.User
@@ -18,8 +21,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection
 import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Primary
+import org.springframework.context.annotation.Import
 import org.springframework.test.context.ActiveProfiles
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -32,6 +39,7 @@ import java.time.LocalDate
 @ActiveProfiles("test")
 @SpringBootTest
 @Testcontainers
+@Import(MongoPersistenceIntegrationTest.FakeBdiProviderConfiguration::class)
 class MongoPersistenceIntegrationTest {
     @Autowired
     private lateinit var snapshotRepository: BdiSnapshotRepository
@@ -47,6 +55,9 @@ class MongoPersistenceIntegrationTest {
 
     @Autowired
     private lateinit var mongoTemplate: MongoTemplate
+
+    @Autowired
+    private lateinit var refreshJobProcessor: BdiRefreshJobProcessor
 
     @Test
     fun `application context starts with MongoDB`() {
@@ -116,6 +127,28 @@ class MongoPersistenceIntegrationTest {
             .hasValue(java.time.Duration.ZERO)
     }
 
+    @Test
+    fun `refresh processor persists lifecycle transitions in MongoDB`() {
+        val job =
+            refreshJobRepository.save(
+                BdiRefreshJob(
+                    status = BdiRefreshJobStatus.PENDING,
+                    trigger = BdiRefreshTrigger.SCHEDULED,
+                    expiresAt = Instant.parse("2026-07-16T12:00:00Z"),
+                ),
+            )
+
+        val jobId = requireNotNull(job.id)
+        refreshJobProcessor.process(jobId)
+
+        val completedJob = refreshJobRepository.findById(jobId)
+        assertThat(completedJob?.status).isEqualTo(BdiRefreshJobStatus.SUCCEEDED)
+        assertThat(completedJob?.startedAt).isNotNull()
+        assertThat(completedJob?.completedAt).isNotNull()
+        assertThat(completedJob?.snapshotId).isNotBlank()
+        assertThat(snapshotRepository.findLatest()?.id).isEqualTo(completedJob?.snapshotId)
+    }
+
     private fun indexNames(type: Class<*>): List<String> = mongoTemplate.indexOps(type).indexInfo.map { it.name }
 
     companion object {
@@ -123,5 +156,20 @@ class MongoPersistenceIntegrationTest {
         @ServiceConnection
         @JvmField
         val mongo = MongoDBContainer("mongo:8.0")
+    }
+
+    @TestConfiguration
+    class FakeBdiProviderConfiguration {
+        @Bean
+        @Primary
+        fun integrationCurrentBdiProvider(): CurrentBdiProvider =
+            CurrentBdiProvider {
+                BdiPublication(
+                    value = BigDecimal("35.08"),
+                    validFrom = LocalDate.parse("2026-01-15"),
+                    sourcePdf = URI.create("https://example.com/mongo-integration.pdf"),
+                    fetchedAt = Instant.parse("2026-07-09T12:00:00Z"),
+                )
+            }
     }
 }

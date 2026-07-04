@@ -150,7 +150,7 @@ Implementation progress:
 - [x] Contract and bootstrap
 - [x] Domain and MongoDB
 - [x] BDI integration
-- [ ] Asynchronous synchronization
+- [x] Asynchronous synchronization
 - [ ] Security
 - [ ] REST API
 - [ ] Rate limiting

@@ -12,7 +12,12 @@ class SynchronizeCurrentBdi(
     private val fingerprintGenerator: BdiFingerprintGenerator,
 ) {
     fun execute(): BdiSynchronizationResult {
-        val publication = currentBdiProvider.current()
+        val publication =
+            try {
+                currentBdiProvider.current()
+            } catch (exception: Exception) {
+                throw BdiSourceRefreshException(exception)
+            }
         val fingerprint = fingerprintGenerator.generate(publication)
         val existingSnapshot = snapshotRepository.findByFingerprint(fingerprint)
 

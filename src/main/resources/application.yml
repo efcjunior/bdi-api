@@ -7,8 +7,10 @@ spring:
 
 bdi-api:
   synchronization:
+    enabled: true
     interval: PT6H
     stale-after: PT12H
+    job-retention: P7D
 
 management:
   endpoints:
@@ -18,4 +20,3 @@ management:
   endpoint:
     health:
       show-details: never
-
