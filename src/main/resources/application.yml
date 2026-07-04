@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: bdi-api
+  data:
+    mongodb:
+      auto-index-creation: false
+
+bdi-api:
+  synchronization:
+    interval: PT6H
+    stale-after: PT12H
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
