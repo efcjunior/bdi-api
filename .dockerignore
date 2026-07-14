@@ -1,0 +1,15 @@
+.git
+.github
+.idea
+.vscode
+.mvn/wrapper/maven-wrapper.jar
+*.iml
+*.log
+.env
+
+target/classes
+target/generated-*
+target/maven-*
+target/surefire-reports
+target/test-classes
+target/*.jar.original

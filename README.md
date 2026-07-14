@@ -27,7 +27,24 @@ Set `GITHUB_USERNAME` and a GitHub personal access token with the
 
 ## Run locally
 
-Start MongoDB, then run:
+Optionally create a local environment file:
+
+```shell
+cp .env.example .env
+```
+
+Docker Compose provides safe development defaults when `.env` is absent, but
+keeping a local `.env` makes changes explicit. The `local` profile uses
+ephemeral RSA keys, so `JWT_PUBLIC_KEY` and `JWT_PRIVATE_KEY` are not required
+for local development.
+
+Start MongoDB with Docker Compose:
+
+```shell
+docker compose up -d mongo
+```
+
+Then run the API from the host:
 
 ```shell
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
@@ -35,6 +52,24 @@ Start MongoDB, then run:
 
 The application health endpoint is available at
 `http://localhost:8080/actuator/health`.
+
+## Run locally with Docker Compose
+
+Build the application JAR first:
+
+```shell
+./mvnw -Dkotlin.compiler.daemon=false clean package
+```
+
+Then start MongoDB and the API:
+
+```shell
+docker compose up --build
+```
+
+The API container uses the `local` profile, reads `.env`, connects to the
+`mongo` service, exposes port `8080`, and emits structured console logs in
+Logstash JSON format.
 
 The versioned API is exposed under `/api/v1`. With the `local` profile,
 Swagger UI is available at `http://localhost:8080/swagger-ui.html` and the
@@ -88,6 +123,33 @@ Forwarded client IP headers are ignored by default. Enable
 behind a trusted reverse proxy that controls `X-Forwarded-For` or `X-Real-IP`.
 A shared rate-limit store is required before running multiple application
 instances.
+
+## Delivery tooling
+
+The repository includes:
+
+- `Dockerfile`: runtime image for an already-built Spring Boot JAR.
+- `docker-compose.yml`: local MongoDB and API services with health checks.
+- `.env.example`: safe local environment template.
+- `.github/workflows/ci.yml`: GitHub Actions workflow that runs Maven verify on
+  JDK 21.
+
+The Docker image intentionally does not run Maven inside the image build. Build
+the JAR before `docker compose up --build`; this avoids passing GitHub Packages
+credentials into Docker build layers.
+
+CI uses GitHub Packages authentication through `actions/setup-java` with server
+ID `github`. If the package `efcjunior/bdi-client` is not readable by the
+repository `GITHUB_TOKEN`, configure a repository secret with a token that has
+`read:packages` permission and expose it as `GITHUB_TOKEN` or adjust the
+workflow secret name.
+
+Operational endpoints:
+
+- `GET /actuator/health`
+- `GET /actuator/info`
+
+Health details are sanitized by default.
 
 ## Verify
 

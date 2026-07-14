@@ -154,7 +154,7 @@ Implementation progress:
 - [x] Security
 - [x] REST API
 - [x] Rate limiting
-- [ ] Delivery tooling
+- [x] Delivery tooling
 - [ ] Hardening and release
 
 | Date | Stage | Deliverables | Completion gate |
