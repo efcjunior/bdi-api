@@ -53,7 +53,7 @@ class AuthenticationServiceTest {
     @Test
     fun `login issues signed access and opaque refresh tokens`() {
         val result = service.login("  ADMIN@EXAMPLE.COM ", "correct-password")
-        val decoded = jwtConfiguration.jwtDecoder(keys, properties).decode(result.accessToken)
+        val decoded = jwtConfiguration.jwtDecoder(keys, properties, clock).decode(result.accessToken)
 
         assertThat(decoded.subject).isEqualTo("user-1")
         assertThat(decoded.audience).containsExactly("bdi-api")

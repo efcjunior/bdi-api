@@ -15,9 +15,12 @@ import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.security.oauth2.jwt.JwtEncoder
+import org.springframework.security.oauth2.jwt.JwtIssuerValidator
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator
 import org.springframework.security.oauth2.jwt.JwtValidators
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
+import java.time.Clock
 
 @Configuration
 class JwtConfiguration {
@@ -31,17 +34,28 @@ class JwtConfiguration {
     fun jwtDecoder(
         keys: RsaKeyMaterial,
         properties: BdiApiProperties,
+        clock: Clock,
     ): JwtDecoder {
         val decoder =
             NimbusJwtDecoder
                 .withPublicKey(keys.publicKey)
                 .signatureAlgorithm(SignatureAlgorithm.RS256)
                 .build()
-        val issuerValidator = JwtValidators.createDefaultWithIssuer(properties.security.jwt.issuer)
+        val timestampValidator = JwtTimestampValidator().apply { setClock(clock) }
+        val issuerValidator =
+            JwtValidators.createDefaultWithValidators(
+                timestampValidator,
+                JwtIssuerValidator(properties.security.jwt.issuer),
+            )
         val audienceValidator = audienceValidator(properties.security.jwt.audience)
         decoder.setJwtValidator(DelegatingOAuth2TokenValidator(issuerValidator, audienceValidator))
         return decoder
     }
+
+    fun jwtDecoder(
+        keys: RsaKeyMaterial,
+        properties: BdiApiProperties,
+    ): JwtDecoder = jwtDecoder(keys, properties, Clock.systemUTC())
 
     private fun audienceValidator(requiredAudience: String): OAuth2TokenValidator<Jwt> =
         OAuth2TokenValidator { jwt ->
