@@ -66,6 +66,29 @@ must contain at least 12 characters. Remove these variables after the account
 has been created. The `local` and `test` profiles use ephemeral RSA keys and
 must not be used in production.
 
+## Rate limiting
+
+The first release uses in-memory Bucket4j buckets and is intended for a single
+application instance. Requests over the limit return `429 Too Many Requests`
+with RFC 9457 Problem Details, `Retry-After`, `RateLimit-*`, and
+`X-RateLimit-*` headers.
+
+Default policies:
+
+| Operation | Limit | Key |
+| --- | --- | --- |
+| Login | 5 requests/minute | Client IP |
+| Token refresh | 10 requests/minute | Client IP |
+| Current BDI | 60 requests/minute | Authenticated user |
+| BDI history | 30 requests/minute | Authenticated user |
+| Administrative operations | 5 requests/hour | Authenticated administrator |
+
+Forwarded client IP headers are ignored by default. Enable
+`bdi-api.rate-limit.trust-forwarded-headers=true` only when the application is
+behind a trusted reverse proxy that controls `X-Forwarded-For` or `X-Real-IP`.
+A shared rate-limit store is required before running multiple application
+instances.
+
 ## Verify
 
 ```shell

@@ -8,6 +8,7 @@ data class BdiApiProperties(
     val synchronization: Synchronization = Synchronization(),
     val security: Security = Security(),
     val openApi: OpenApi = OpenApi(),
+    val rateLimit: RateLimit = RateLimit(),
 ) {
     data class Synchronization(
         val enabled: Boolean = true,
@@ -38,4 +39,19 @@ data class BdiApiProperties(
     data class OpenApi(
         val public: Boolean = false,
     )
+
+    data class RateLimit(
+        val enabled: Boolean = true,
+        val trustForwardedHeaders: Boolean = false,
+        val login: Policy = Policy(5, Duration.ofMinutes(1)),
+        val refresh: Policy = Policy(10, Duration.ofMinutes(1)),
+        val currentBdi: Policy = Policy(60, Duration.ofMinutes(1)),
+        val bdiHistory: Policy = Policy(30, Duration.ofMinutes(1)),
+        val administration: Policy = Policy(5, Duration.ofHours(1)),
+    ) {
+        data class Policy(
+            val capacity: Long,
+            val refillPeriod: Duration,
+        )
+    }
 }

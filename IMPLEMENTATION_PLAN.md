@@ -153,7 +153,7 @@ Implementation progress:
 - [x] Asynchronous synchronization
 - [x] Security
 - [x] REST API
-- [ ] Rate limiting
+- [x] Rate limiting
 - [ ] Delivery tooling
 - [ ] Hardening and release
 

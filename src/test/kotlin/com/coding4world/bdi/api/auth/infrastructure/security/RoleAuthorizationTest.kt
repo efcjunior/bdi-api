@@ -6,6 +6,10 @@ import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshJobStatus
 import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshTrigger
 import com.coding4world.bdi.api.bdi.infrastructure.web.BdiRefreshJobController
 import com.coding4world.bdi.api.shared.config.BdiApiProperties
+import com.coding4world.bdi.api.shared.ratelimit.RateLimitBucketRegistry
+import com.coding4world.bdi.api.shared.ratelimit.RateLimitIdentityResolver
+import com.coding4world.bdi.api.shared.ratelimit.RateLimitPolicyResolver
+import com.coding4world.bdi.api.shared.ratelimit.RateLimitingFilter
 import com.coding4world.bdi.api.shared.web.ApiProblemFactory
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -110,6 +114,20 @@ class RoleAuthorizationTest {
             objectMapper: ObjectMapper,
             problems: ApiProblemFactory,
         ) = SecurityProblemWriter(objectMapper, problems)
+
+        @Bean
+        fun testRateLimitingFilter(
+            properties: BdiApiProperties,
+            objectMapper: ObjectMapper,
+            problems: ApiProblemFactory,
+        ) = RateLimitingFilter(
+            properties = properties,
+            policyResolver = RateLimitPolicyResolver(),
+            identityResolver = RateLimitIdentityResolver(),
+            bucketRegistry = RateLimitBucketRegistry(),
+            objectMapper = objectMapper,
+            problems = problems,
+        )
 
         @Bean
         fun testJwtDecoder(): JwtDecoder =

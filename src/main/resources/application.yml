@@ -24,6 +24,24 @@ bdi-api:
       password: ${BOOTSTRAP_ADMIN_PASSWORD:}
   open-api:
     public: false
+  rate-limit:
+    enabled: true
+    trust-forwarded-headers: false
+    login:
+      capacity: 5
+      refill-period: PT1M
+    refresh:
+      capacity: 10
+      refill-period: PT1M
+    current-bdi:
+      capacity: 60
+      refill-period: PT1M
+    bdi-history:
+      capacity: 30
+      refill-period: PT1M
+    administration:
+      capacity: 5
+      refill-period: PT1H
 
 springdoc:
   api-docs:
