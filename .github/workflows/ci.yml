@@ -16,8 +16,8 @@ jobs:
     name: Maven verify
     runs-on: ubuntu-latest
     env:
-      GITHUB_USERNAME: ${{ github.actor }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_USERNAME: efcjunior
+      GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
