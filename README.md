@@ -140,9 +140,8 @@ credentials into Docker build layers.
 
 CI uses GitHub Packages authentication through `actions/setup-java` with server
 ID `github`. If the package `efcjunior/bdi-client` is not readable by the
-repository `GITHUB_TOKEN`, configure a repository secret with a token that has
-`read:packages` permission and expose it as `GITHUB_TOKEN` or adjust the
-workflow secret name.
+automatic repository token, configure repository secret `GH_PACKAGES_TOKEN`
+with a token that has `read:packages` permission.
 
 Operational endpoints:
 
@@ -151,10 +150,33 @@ Operational endpoints:
 
 Health details are sanitized by default.
 
+## Hardening and release
+
+The build is hardened with Maven Enforcer rules:
+
+- JDK 21 is required.
+- Maven 3.9 or newer is required.
+
+The Spring Boot build also generates build metadata for Actuator info.
+
+Before publishing `v1.0.0`, review:
+
+- [CHANGELOG.md](CHANGELOG.md)
+- [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
+- [SECURITY.md](SECURITY.md)
+
+Recommended release validation:
+
+```shell
+./mvnw -Dkotlin.compiler.daemon=false clean verify
+docker compose config
+docker compose build api
+```
+
 ## Verify
 
 ```shell
-./mvnw clean verify
+./mvnw -Dkotlin.compiler.daemon=false clean verify
 ```
 
 ## Package organization

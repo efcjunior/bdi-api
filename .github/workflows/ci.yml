@@ -33,4 +33,10 @@ jobs:
           server-password: GITHUB_TOKEN
 
       - name: Verify
-        run: ./mvnw -Dkotlin.compiler.daemon=false verify
+        run: ./mvnw -Dkotlin.compiler.daemon=false clean verify
+
+      - name: Validate Docker Compose
+        run: docker compose config
+
+      - name: Build Docker image
+        run: docker compose build api

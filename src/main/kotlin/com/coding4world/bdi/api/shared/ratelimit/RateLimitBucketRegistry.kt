@@ -4,7 +4,6 @@ import com.coding4world.bdi.api.shared.config.BdiApiProperties
 import io.github.bucket4j.Bandwidth
 import io.github.bucket4j.Bucket
 import io.github.bucket4j.ConsumptionProbe
-import io.github.bucket4j.Refill
 import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
 
@@ -24,6 +23,12 @@ class RateLimitBucketRegistry {
     private fun newBucket(configuration: BdiApiProperties.RateLimit.Policy): Bucket =
         Bucket
             .builder()
-            .addLimit(Bandwidth.classic(configuration.capacity, Refill.intervally(configuration.capacity, configuration.refillPeriod)))
+            .addLimit(
+                Bandwidth
+                    .builder()
+                    .capacity(configuration.capacity)
+                    .refillIntervally(configuration.capacity, configuration.refillPeriod)
+                    .build(),
+            )
             .build()
 }
