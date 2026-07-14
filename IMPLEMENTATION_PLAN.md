@@ -152,7 +152,7 @@ Implementation progress:
 - [x] BDI integration
 - [x] Asynchronous synchronization
 - [x] Security
-- [ ] REST API
+- [x] REST API
 - [ ] Rate limiting
 - [ ] Delivery tooling
 - [ ] Hardening and release

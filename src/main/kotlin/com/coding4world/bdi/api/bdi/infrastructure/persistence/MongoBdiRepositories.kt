@@ -6,7 +6,9 @@ import com.coding4world.bdi.api.bdi.domain.model.BdiSnapshot
 import com.coding4world.bdi.api.bdi.domain.port.BdiRefreshJobRepository
 import com.coding4world.bdi.api.bdi.domain.port.BdiSnapshotRepository
 import com.coding4world.bdi.api.shared.persistence.toMongoPrecision
+import com.coding4world.bdi.api.shared.domain.PageResult
 import org.bson.types.Decimal128
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Repository
 
@@ -19,6 +21,20 @@ internal class MongoBdiSnapshotRepository(
     override fun findLatest(): BdiSnapshot? = repository.findTopByOrderByValidFromDescCreatedAtDesc()?.toDomain()
 
     override fun findByFingerprint(fingerprint: String): BdiSnapshot? = repository.findByFingerprint(fingerprint)?.toDomain()
+
+    override fun findHistory(
+        page: Int,
+        size: Int,
+    ): PageResult<BdiSnapshot> {
+        val result = repository.findAllByOrderByValidFromDescCreatedAtDesc(PageRequest.of(page, size))
+        return PageResult(
+            content = result.content.map(BdiSnapshotDocument::toDomain),
+            page = result.number,
+            size = result.size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
+        )
+    }
 }
 
 @Repository

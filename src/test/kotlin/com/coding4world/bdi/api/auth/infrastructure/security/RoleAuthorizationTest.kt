@@ -5,6 +5,8 @@ import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshJob
 import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshJobStatus
 import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshTrigger
 import com.coding4world.bdi.api.bdi.infrastructure.web.BdiRefreshJobController
+import com.coding4world.bdi.api.shared.config.BdiApiProperties
+import com.coding4world.bdi.api.shared.web.ApiProblemFactory
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -21,9 +23,13 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc
 import org.springframework.mock.web.MockServletContext
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
+import tools.jackson.databind.ObjectMapper
 
 class RoleAuthorizationTest {
     private lateinit var mockMvc: MockMvc
@@ -51,6 +57,9 @@ class RoleAuthorizationTest {
     fun `missing access token is unauthorized`() {
         mockMvc.perform(get("/api/v1/admin/bdi/refresh/job-1"))
             .andExpect(status().isUnauthorized)
+            .andExpect(content().contentTypeCompatibleWith(org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"))
+            .andExpect(jsonPath("$.traceId").isNotEmpty)
     }
 
     @Test
@@ -59,6 +68,7 @@ class RoleAuthorizationTest {
             get("/api/v1/admin/bdi/refresh/job-1")
                 .header("Authorization", "Bearer user-token"),
         ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("ACCESS_DENIED"))
     }
 
     @Test
@@ -70,10 +80,37 @@ class RoleAuthorizationTest {
             .andExpect(jsonPath("$.id").value("job-1"))
     }
 
+    @Test
+    fun `administrator can start an asynchronous refresh`() {
+        mockMvc.perform(
+            post("/api/v1/admin/bdi/refresh")
+                .header("Authorization", "Bearer admin-token"),
+        ).andExpect(status().isAccepted)
+            .andExpect(jsonPath("$.jobId").value("job-created"))
+            .andExpect(
+                header().string("Location", "/api/v1/admin/bdi/refresh/job-created"),
+            )
+    }
+
     @Configuration
     @EnableWebMvc
     @Import(SecurityConfiguration::class)
     class SecurityTestConfiguration {
+        @Bean
+        fun testProperties() = BdiApiProperties()
+
+        @Bean
+        fun testObjectMapper() = ObjectMapper()
+
+        @Bean
+        fun testProblemFactory() = ApiProblemFactory()
+
+        @Bean
+        fun testSecurityProblemWriter(
+            objectMapper: ObjectMapper,
+            problems: ApiProblemFactory,
+        ) = SecurityProblemWriter(objectMapper, problems)
+
         @Bean
         fun testJwtDecoder(): JwtDecoder =
             JwtDecoder { token ->
@@ -94,7 +131,14 @@ class RoleAuthorizationTest {
                 override fun request(
                     trigger: BdiRefreshTrigger,
                     requestedBy: String?,
-                ): BdiRefreshJob = error("Refresh requests are not used by this test")
+                ): BdiRefreshJob =
+                    BdiRefreshJob(
+                        id = "job-created",
+                        status = BdiRefreshJobStatus.PENDING,
+                        trigger = trigger,
+                        requestedBy = requestedBy,
+                        expiresAt = Instant.parse("2026-07-17T12:00:00Z"),
+                    )
 
                 override fun findById(jobId: String): BdiRefreshJob =
                     BdiRefreshJob(

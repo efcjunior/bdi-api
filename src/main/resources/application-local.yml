@@ -7,3 +7,6 @@ logging:
   level:
     com.coding4world.bdi.api: DEBUG
 
+bdi-api:
+  open-api:
+    public: true

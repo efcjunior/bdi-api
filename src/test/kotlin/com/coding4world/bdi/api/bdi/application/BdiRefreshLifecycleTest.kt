@@ -9,6 +9,7 @@ import com.coding4world.bdi.api.bdi.domain.port.BdiRefreshJobRepository
 import com.coding4world.bdi.api.bdi.domain.port.BdiSnapshotRepository
 import com.coding4world.bdi.api.bdi.domain.port.CurrentBdiProvider
 import com.coding4world.bdi.api.shared.config.BdiApiProperties
+import com.coding4world.bdi.api.shared.domain.PageResult
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -216,4 +217,9 @@ private class RefreshInMemoryBdiSnapshotRepository : BdiSnapshotRepository {
 
     override fun findByFingerprint(fingerprint: String): BdiSnapshot? =
         snapshots.firstOrNull { it.fingerprint == fingerprint }
+
+    override fun findHistory(
+        page: Int,
+        size: Int,
+    ) = PageResult(snapshots, page, size, snapshots.size.toLong(), if (snapshots.isEmpty()) 0 else 1)
 }

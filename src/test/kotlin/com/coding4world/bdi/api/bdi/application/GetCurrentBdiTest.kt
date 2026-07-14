@@ -4,6 +4,7 @@ import com.coding4world.bdi.api.bdi.domain.model.BdiFreshnessStatus
 import com.coding4world.bdi.api.bdi.domain.model.BdiSnapshot
 import com.coding4world.bdi.api.bdi.domain.port.BdiSnapshotRepository
 import com.coding4world.bdi.api.shared.config.BdiApiProperties
+import com.coding4world.bdi.api.shared.domain.PageResult
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
@@ -74,4 +75,9 @@ private class StubBdiSnapshotRepository(
     override fun findLatest(): BdiSnapshot? = snapshot
 
     override fun findByFingerprint(fingerprint: String): BdiSnapshot? = null
+
+    override fun findHistory(
+        page: Int,
+        size: Int,
+    ) = PageResult(listOfNotNull(snapshot), page, size, if (snapshot == null) 0 else 1, if (snapshot == null) 0 else 1)
 }

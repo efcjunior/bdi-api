@@ -1,8 +1,9 @@
 package com.coding4world.bdi.api.auth.infrastructure.web
 
-import com.coding4world.bdi.api.auth.application.AuthenticationService
+import com.coding4world.bdi.api.auth.application.AuthenticationOperations
 import com.coding4world.bdi.api.auth.application.AuthenticationTokens
 import com.coding4world.bdi.api.shared.config.BdiApiProperties
+import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
@@ -16,15 +17,16 @@ import java.time.Instant
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@SecurityRequirements
 class AuthenticationController(
-    private val authenticationService: AuthenticationService,
+    private val authentication: AuthenticationOperations,
     private val properties: BdiApiProperties,
 ) {
     @PostMapping("/login")
     fun login(
         @Valid @RequestBody request: LoginRequest,
     ): AuthenticationResponse =
-        authenticationService
+        authentication
             .login(request.email, request.password)
             .toResponse(properties.security.jwt.accessTokenTtl.seconds)
 
@@ -32,7 +34,7 @@ class AuthenticationController(
     fun refresh(
         @Valid @RequestBody request: RefreshRequest,
     ): AuthenticationResponse =
-        authenticationService
+        authentication
             .refresh(request.refreshToken)
             .toResponse(properties.security.jwt.accessTokenTtl.seconds)
 
@@ -41,7 +43,7 @@ class AuthenticationController(
     fun logout(
         @Valid @RequestBody request: RefreshRequest,
     ) {
-        authenticationService.logout(request.refreshToken)
+        authentication.logout(request.refreshToken)
     }
 }
 

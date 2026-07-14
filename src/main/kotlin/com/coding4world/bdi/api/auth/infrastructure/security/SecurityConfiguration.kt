@@ -1,5 +1,7 @@
 package com.coding4world.bdi.api.auth.infrastructure.security
 
+import com.coding4world.bdi.api.shared.config.BdiApiProperties
+import org.springframework.http.HttpStatus
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -18,18 +20,48 @@ class SecurityConfiguration {
     fun passwordEncoder(): PasswordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder()
 
     @Bean
-    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
+    fun securityFilterChain(
+        http: HttpSecurity,
+        properties: BdiApiProperties,
+        securityProblems: SecurityProblemWriter,
+    ): SecurityFilterChain {
         http
             .csrf { it.disable() }
             .cors { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { authorization ->
+                authorization.requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
+                authorization.requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                val documentation = arrayOf("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                if (properties.openApi.public) {
+                    authorization.requestMatchers(*documentation).permitAll()
+                } else {
+                    authorization.requestMatchers(*documentation).hasRole("ADMIN")
+                }
                 authorization
-                    .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
-                    .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     .requestMatchers("/api/v1/**").authenticated()
                     .anyRequest().denyAll()
+            }
+            .exceptionHandling { exceptions ->
+                exceptions.authenticationEntryPoint { _, response, _ ->
+                    securityProblems.write(
+                        response,
+                        HttpStatus.UNAUTHORIZED,
+                        "Authentication required",
+                        "A valid access token is required",
+                        "AUTHENTICATION_REQUIRED",
+                    )
+                }
+                exceptions.accessDeniedHandler { _, response, _ ->
+                    securityProblems.write(
+                        response,
+                        HttpStatus.FORBIDDEN,
+                        "Access denied",
+                        "You do not have permission to access this resource",
+                        "ACCESS_DENIED",
+                    )
+                }
             }
             .oauth2ResourceServer { resourceServer ->
                 resourceServer.jwt { jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()) }

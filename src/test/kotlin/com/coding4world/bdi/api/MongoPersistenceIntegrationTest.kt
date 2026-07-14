@@ -107,8 +107,10 @@ class MongoPersistenceIntegrationTest {
             )
 
         assertThat(userRepository.findByNormalizedEmail("admin@example.com")).isEqualTo(user)
+        assertThat(userRepository.findById(requireNotNull(user.id))).isEqualTo(user)
         assertThat(refreshTokenRepository.findByTokenHash("token-hash")).isEqualTo(token)
         assertThat(snapshotRepository.findLatest()).isEqualTo(snapshot)
+        assertThat(snapshotRepository.findHistory(0, 10).content).contains(snapshot)
         assertThat(refreshJobRepository.findById(requireNotNull(job.id))).isEqualTo(job)
     }
 

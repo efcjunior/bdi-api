@@ -7,6 +7,7 @@ import java.time.Duration
 data class BdiApiProperties(
     val synchronization: Synchronization = Synchronization(),
     val security: Security = Security(),
+    val openApi: OpenApi = OpenApi(),
 ) {
     data class Synchronization(
         val enabled: Boolean = true,
@@ -32,5 +33,9 @@ data class BdiApiProperties(
     data class BootstrapAdmin(
         val email: String = "",
         val password: String = "",
+    )
+
+    data class OpenApi(
+        val public: Boolean = false,
     )
 }

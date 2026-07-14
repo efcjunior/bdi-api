@@ -22,11 +22,11 @@ class AuthenticationService(
     private val jwtTokenService: JwtTokenService,
     private val properties: BdiApiProperties,
     private val clock: Clock,
-) {
+) : AuthenticationOperations {
     private val secureRandom = SecureRandom()
     private val dummyPasswordHash = requireNotNull(passwordEncoder.encode(UUID.randomUUID().toString()))
 
-    fun login(
+    override fun login(
         email: String,
         password: String,
     ): AuthenticationTokens {
@@ -38,7 +38,7 @@ class AuthenticationService(
         return issueTokenPair(user, UUID.randomUUID().toString())
     }
 
-    fun refresh(rawRefreshToken: String): AuthenticationTokens {
+    override fun refresh(rawRefreshToken: String): AuthenticationTokens {
         val currentHash = hash(rawRefreshToken)
         val currentToken =
             refreshTokenRepository.findByTokenHash(currentHash)
@@ -70,7 +70,7 @@ class AuthenticationService(
         return tokenPair(user, replacement.rawValue, savedReplacement)
     }
 
-    fun logout(rawRefreshToken: String) {
+    override fun logout(rawRefreshToken: String) {
         refreshTokenRepository.revokeIfActive(hash(rawRefreshToken), clock.instant())
     }
 

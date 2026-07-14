@@ -4,6 +4,8 @@ import com.coding4world.bdi.api.bdi.application.BdiRefreshJobs
 import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshJob
 import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshJobStatus
 import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshTrigger
+import com.coding4world.bdi.api.shared.web.ApiExceptionHandler
+import com.coding4world.bdi.api.shared.web.ApiProblemFactory
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.test.web.servlet.MockMvc
@@ -19,7 +21,11 @@ class BdiRefreshJobControllerTest {
 
     @BeforeEach
     fun setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(BdiRefreshJobController(service)).build()
+        mockMvc =
+            MockMvcBuilders
+                .standaloneSetup(BdiRefreshJobController(service))
+                .setControllerAdvice(ApiExceptionHandler(ApiProblemFactory()))
+                .build()
     }
 
     @Test

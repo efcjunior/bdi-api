@@ -36,6 +36,23 @@ Start MongoDB, then run:
 The application health endpoint is available at
 `http://localhost:8080/actuator/health`.
 
+The versioned API is exposed under `/api/v1`. With the `local` profile,
+Swagger UI is available at `http://localhost:8080/swagger-ui.html` and the
+OpenAPI document at `http://localhost:8080/v3/api-docs`. Outside the local
+profile, both documentation endpoints require an administrator access token.
+
+Main endpoints:
+
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/bdi/current`
+- `GET /api/v1/bdi/history?page=0&size=20`
+- `POST /api/v1/admin/bdi/refresh`
+- `GET /api/v1/admin/bdi/refresh/{jobId}`
+- `POST /api/v1/admin/users`
+- `PATCH /api/v1/admin/users/{userId}`
+
 ## Security configuration
 
 Production requires an RSA key pair supplied through `JWT_PUBLIC_KEY` and
