@@ -1,4 +1,4 @@
-package com.coding4world.bdi.api.auth.infrastructure.security
+package com.coding4world.bdi.api.shared.security
 
 import com.coding4world.bdi.api.shared.web.ApiProblemFactory
 import jakarta.servlet.http.HttpServletResponse

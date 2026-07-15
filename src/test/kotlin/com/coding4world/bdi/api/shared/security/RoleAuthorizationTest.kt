@@ -1,4 +1,4 @@
-package com.coding4world.bdi.api.auth.infrastructure.security
+package com.coding4world.bdi.api.shared.security
 
 import com.coding4world.bdi.api.bdi.application.BdiRefreshJobs
 import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshJob

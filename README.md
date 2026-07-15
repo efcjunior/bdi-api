@@ -178,8 +178,8 @@ docker compose build api
 
 Code is organized by feature under `com.coding4world.bdi.api`:
 
-- `auth`: resource-server JWT validation and authorization
 - `bdi`: BDI snapshots and refresh jobs
+- `shared.security`: resource-server JWT validation and authorization
 - `shared`: cross-cutting configuration and infrastructure
 
 Each feature keeps its HTTP adapters, application use cases, domain rules, and
