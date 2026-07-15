@@ -8,5 +8,10 @@ logging:
     com.coding4world.bdi.api: DEBUG
 
 bdi-api:
+  security:
+    jwt:
+      issuer: ${AUTH_JWT_ISSUER:http://localhost:8080}
+      audience: ${AUTH_JWT_AUDIENCE:bdi-api}
+      jwks-uri: ${AUTH_JWKS_URI:http://localhost:8080/api/v1/auth/jwks}
   open-api:
     public: true

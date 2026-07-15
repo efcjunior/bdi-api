@@ -8,8 +8,6 @@ class RateLimitPolicyResolver {
     fun resolve(request: HttpServletRequest): RateLimitPolicy? {
         val path = request.pathWithinApplication()
         return when {
-            request.method == "POST" && path == "/api/v1/auth/login" -> RateLimitPolicy.LOGIN
-            request.method == "POST" && path == "/api/v1/auth/refresh" -> RateLimitPolicy.TOKEN_REFRESH
             request.method == "GET" && path == "/api/v1/bdi/current" -> RateLimitPolicy.CURRENT_BDI
             request.method == "GET" && path == "/api/v1/bdi/history" -> RateLimitPolicy.BDI_HISTORY
             path.startsWith("/api/v1/admin/") -> RateLimitPolicy.ADMINISTRATION

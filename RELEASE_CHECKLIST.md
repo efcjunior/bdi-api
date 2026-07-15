@@ -9,32 +9,26 @@ Use this checklist before publishing `v1.0.0`.
 - [ ] `./mvnw -Dkotlin.compiler.daemon=false clean verify` passes locally.
 - [ ] `docker compose config` succeeds.
 - [ ] `docker compose build api` succeeds after the JAR is built.
-- [ ] GitHub repository secret `GH_PACKAGES_TOKEN` exists and can read
-  `efcjunior/bdi-client`.
+- [ ] GitHub repository secret `GH_PACKAGES_TOKEN` exists and can read `efcjunior/bdi-client`.
 
 ## Security checks
 
-- [ ] No passwords, JWTs, refresh tokens, private keys, or PATs are committed.
+- [ ] No passwords, JWTs, refresh tokens, private signing keys, or PATs are committed.
 - [ ] Any token accidentally shared during development has been revoked.
-- [ ] Production `JWT_PUBLIC_KEY` and `JWT_PRIVATE_KEY` are configured from
-  deployment secrets only.
-- [ ] `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` are used only for
-  first startup and removed after the first administrator account exists.
+- [ ] Production `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, and `AUTH_JWKS_URI` point to the deployed `auth-api`.
 - [ ] CORS remains disabled unless explicit trusted origins are configured.
 - [ ] Forwarded IP headers are trusted only behind a controlled reverse proxy.
 - [ ] Actuator health details remain sanitized in production.
 
 ## Acceptance checks
 
-- [ ] Protected endpoints reject missing, invalid, expired, or unauthorized
-  tokens.
-- [ ] Refresh token rotation and reuse detection work.
-- [ ] Failed external BDI synchronization preserves the latest successful
-  snapshot.
+- [ ] Protected endpoints reject missing, invalid, expired, or unauthorized tokens.
+- [ ] `bdi-api` rejects tokens with the wrong issuer or audience.
+- [ ] Removed auth/user endpoints are not available in `bdi-api`.
+- [ ] Failed external BDI synchronization preserves the latest successful snapshot.
 - [ ] Current BDI distinguishes `CURRENT` and `STALE`.
 - [ ] BDI history is paginated.
-- [ ] Rate-limited requests return `429`, `Retry-After`, and rate-limit
-  headers.
+- [ ] Rate-limited requests return `429`, `Retry-After`, and rate-limit headers.
 - [ ] Local startup is reproducible with Docker Compose.
 
 ## Release steps

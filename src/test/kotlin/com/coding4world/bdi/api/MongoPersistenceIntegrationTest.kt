@@ -1,7 +1,5 @@
 package com.coding4world.bdi.api
 
-import com.coding4world.bdi.api.auth.domain.model.RefreshToken
-import com.coding4world.bdi.api.auth.domain.port.RefreshTokenRepository
 import com.coding4world.bdi.api.bdi.application.BdiRefreshJobProcessor
 import com.coding4world.bdi.api.bdi.domain.model.BdiPublication
 import com.coding4world.bdi.api.bdi.domain.model.BdiRefreshJob
@@ -13,20 +11,16 @@ import com.coding4world.bdi.api.bdi.domain.port.BdiSnapshotRepository
 import com.coding4world.bdi.api.bdi.domain.port.CurrentBdiProvider
 import com.coding4world.bdi.api.bdi.infrastructure.persistence.BdiRefreshJobDocument
 import com.coding4world.bdi.api.bdi.infrastructure.persistence.BdiSnapshotDocument
-import com.coding4world.bdi.api.user.domain.model.User
-import com.coding4world.bdi.api.user.domain.model.UserRole
-import com.coding4world.bdi.api.user.domain.port.UserRepository
-import com.coding4world.bdi.api.user.infrastructure.persistence.UserDocument
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection
-import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Primary
 import org.springframework.context.annotation.Import
+import org.springframework.context.annotation.Primary
+import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -48,12 +42,6 @@ class MongoPersistenceIntegrationTest {
     private lateinit var refreshJobRepository: BdiRefreshJobRepository
 
     @Autowired
-    private lateinit var userRepository: UserRepository
-
-    @Autowired
-    private lateinit var refreshTokenRepository: RefreshTokenRepository
-
-    @Autowired
     private lateinit var mongoTemplate: MongoTemplate
 
     @Autowired
@@ -65,26 +53,8 @@ class MongoPersistenceIntegrationTest {
     }
 
     @Test
-    fun `repositories persist and retrieve domain models`() {
+    fun `repositories persist and retrieve BDI domain models`() {
         val now = Instant.parse("2026-07-04T12:00:00Z")
-        val user =
-            userRepository.save(
-                User(
-                    normalizedEmail = "admin@example.com",
-                    passwordHash = "encoded-password",
-                    roles = setOf(UserRole.ADMIN),
-                    enabled = true,
-                ),
-            )
-        val token =
-            refreshTokenRepository.save(
-                RefreshToken(
-                    tokenHash = "token-hash",
-                    familyId = "family-id",
-                    userId = requireNotNull(user.id),
-                    expiresAt = now.plusSeconds(3600),
-                ),
-            )
         val snapshot =
             snapshotRepository.save(
                 BdiSnapshot(
@@ -100,33 +70,23 @@ class MongoPersistenceIntegrationTest {
                 BdiRefreshJob(
                     status = BdiRefreshJobStatus.PENDING,
                     trigger = BdiRefreshTrigger.ADMIN,
-                    requestedBy = user.id,
+                    requestedBy = "admin-user-id",
                     snapshotId = snapshot.id,
                     expiresAt = now.plusSeconds(86_400),
                 ),
             )
 
-        assertThat(userRepository.findByNormalizedEmail("admin@example.com")).isEqualTo(user)
-        assertThat(userRepository.findById(requireNotNull(user.id))).isEqualTo(user)
-        assertThat(refreshTokenRepository.findByTokenHash("token-hash")).isEqualTo(token)
         assertThat(snapshotRepository.findLatest()).isEqualTo(snapshot)
         assertThat(snapshotRepository.findHistory(0, 10).content).contains(snapshot)
         assertThat(refreshJobRepository.findById(requireNotNull(job.id))).isEqualTo(job)
     }
 
     @Test
-    fun `required unique and TTL indexes exist`() {
-        assertThat(indexNames(UserDocument::class.java)).contains("uk_users_normalized_email")
+    fun `required BDI unique and TTL indexes exist`() {
         assertThat(indexNames(BdiSnapshotDocument::class.java))
             .contains("uk_bdi_snapshots_fingerprint", "ix_bdi_snapshots_latest")
         assertThat(indexNames(BdiRefreshJobDocument::class.java))
             .contains("ix_bdi_refresh_jobs_active", "ttl_bdi_refresh_jobs_expires_at")
-
-        val tokenIndexes = mongoTemplate.indexOps("refresh_tokens").indexInfo
-        assertThat(tokenIndexes.map { it.name })
-            .contains("uk_refresh_tokens_token_hash", "ix_refresh_tokens_family_id", "ttl_refresh_tokens_expires_at")
-        assertThat(tokenIndexes.single { it.name == "ttl_refresh_tokens_expires_at" }.expireAfter)
-            .hasValue(java.time.Duration.ZERO)
     }
 
     @Test
@@ -149,40 +109,6 @@ class MongoPersistenceIntegrationTest {
         assertThat(completedJob?.completedAt).isNotNull()
         assertThat(completedJob?.snapshotId).isNotBlank()
         assertThat(snapshotRepository.findLatest()?.id).isEqualTo(completedJob?.snapshotId)
-    }
-
-    @Test
-    fun `refresh token consumption and family revocation are atomic in MongoDB`() {
-        val now = Instant.parse("2026-07-10T12:00:00Z")
-        refreshTokenRepository.save(
-            RefreshToken(
-                tokenHash = "rotation-token-1",
-                familyId = "rotation-family",
-                userId = "user-1",
-                expiresAt = now.plusSeconds(3600),
-            ),
-        )
-        refreshTokenRepository.save(
-            RefreshToken(
-                tokenHash = "rotation-token-2",
-                familyId = "rotation-family",
-                userId = "user-1",
-                expiresAt = now.plusSeconds(3600),
-            ),
-        )
-
-        val firstConsumption =
-            refreshTokenRepository.revokeIfActive("rotation-token-1", now, "rotation-token-2")
-        val repeatedConsumption =
-            refreshTokenRepository.revokeIfActive("rotation-token-1", now, "unexpected-replacement")
-        refreshTokenRepository.revokeFamily("rotation-family", now)
-
-        assertThat(firstConsumption).isTrue()
-        assertThat(repeatedConsumption).isFalse()
-        assertThat(refreshTokenRepository.findByTokenHash("rotation-token-1")?.replacementTokenHash)
-            .isEqualTo("rotation-token-2")
-        assertThat(refreshTokenRepository.findAllByFamilyId("rotation-family"))
-            .allMatch { it.revokedAt == now }
     }
 
     private fun indexNames(type: Class<*>): List<String> = mongoTemplate.indexOps(type).indexInfo.map { it.name }

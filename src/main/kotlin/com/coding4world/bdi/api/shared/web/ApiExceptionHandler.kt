@@ -1,24 +1,20 @@
 package com.coding4world.bdi.api.shared.web
 
-import com.coding4world.bdi.api.auth.application.InvalidAuthenticationException
 import com.coding4world.bdi.api.bdi.application.BdiRefreshAlreadyRunningException
 import com.coding4world.bdi.api.bdi.application.BdiRefreshJobNotFoundException
 import com.coding4world.bdi.api.bdi.application.BdiRefreshSchedulingException
 import com.coding4world.bdi.api.bdi.application.BdiUnavailableException
-import com.coding4world.bdi.api.user.application.InvalidUserUpdateException
-import com.coding4world.bdi.api.user.application.UserAlreadyExistsException
-import com.coding4world.bdi.api.user.application.UserNotFoundException
 import jakarta.validation.ConstraintViolationException
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.HttpMediaTypeNotSupportedException
 import org.springframework.web.HttpRequestMethodNotSupportedException
-import org.springframework.web.bind.MissingServletRequestParameterException
-import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.HandlerMethodValidationException
@@ -28,15 +24,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 class ApiExceptionHandler(
     private val problems: ApiProblemFactory,
 ) {
-    @ExceptionHandler(InvalidAuthenticationException::class)
-    fun invalidAuthentication(): ResponseEntity<ProblemDetail> =
-        response(
-            HttpStatus.UNAUTHORIZED,
-            "Authentication failed",
-            "The supplied authentication credentials are invalid",
-            "INVALID_AUTHENTICATION",
-        )
-
     @ExceptionHandler(BdiUnavailableException::class)
     fun bdiUnavailable(): ResponseEntity<ProblemDetail> =
         response(HttpStatus.SERVICE_UNAVAILABLE, "BDI unavailable", "No BDI snapshot is currently available", "BDI_UNAVAILABLE")
@@ -67,15 +54,7 @@ class ApiExceptionHandler(
             "BDI_REFRESH_SCHEDULING_FAILED",
         )
 
-    @ExceptionHandler(UserAlreadyExistsException::class)
-    fun userAlreadyExists(): ResponseEntity<ProblemDetail> =
-        response(HttpStatus.CONFLICT, "User already exists", "A user with this email already exists", "USER_ALREADY_EXISTS")
-
-    @ExceptionHandler(UserNotFoundException::class)
-    fun userNotFound(): ResponseEntity<ProblemDetail> =
-        response(HttpStatus.NOT_FOUND, "User not found", "The requested user was not found", "USER_NOT_FOUND")
-
-    @ExceptionHandler(InvalidUserUpdateException::class, IllegalArgumentException::class)
+    @ExceptionHandler(IllegalArgumentException::class)
     fun invalidRequest(exception: IllegalArgumentException): ResponseEntity<ProblemDetail> =
         response(HttpStatus.BAD_REQUEST, "Invalid request", exception.message ?: "The request is invalid", "INVALID_REQUEST")
 

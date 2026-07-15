@@ -19,7 +19,7 @@ privately and include:
 
 Never commit or paste:
 
-- JWT private keys;
+- JWT private signing keys;
 - GitHub personal access tokens;
 - passwords;
 - access tokens;
@@ -32,9 +32,7 @@ the affected GitHub Actions or deployment secret.
 ## Production requirements
 
 - Run without the `local` or `test` profile.
-- Configure `JWT_PUBLIC_KEY` and `JWT_PRIVATE_KEY` from a secret store.
-- Remove bootstrap administrator credentials after the first administrator is
-  created.
+- Configure `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, and `AUTH_JWKS_URI` from the deployed `auth-api`.
 - Keep Actuator health details sanitized.
 - Enable forwarded IP header trust only behind a controlled reverse proxy.
 - Use a shared rate-limit store before horizontal scaling.

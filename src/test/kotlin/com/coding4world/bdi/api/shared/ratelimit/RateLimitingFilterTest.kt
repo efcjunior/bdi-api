@@ -26,65 +26,16 @@ import java.time.Duration
 
 class RateLimitingFilterTest {
     @Test
-    fun `login is limited by client IP and returns rate limit problem details`() {
-        val mockMvc = mockMvc(properties(login = policy(capacity = 2)))
+    fun `auth endpoints are not rate limited by bdi api`() {
+        val mockMvc = mockMvc(properties(administration = policy(capacity = 1)))
 
         mockMvc.perform(post("/api/v1/auth/login").from("10.0.0.1"))
             .andExpect(status().isNotFound)
-            .andExpect(header().string("RateLimit-Limit", "2"))
-            .andExpect(header().string("RateLimit-Remaining", "1"))
+            .andExpect(header().doesNotExist("RateLimit-Limit"))
 
-        mockMvc.perform(post("/api/v1/auth/login").from("10.0.0.1"))
+        mockMvc.perform(post("/api/v1/auth/refresh").from("10.0.0.1"))
             .andExpect(status().isNotFound)
-            .andExpect(header().string("RateLimit-Remaining", "0"))
-
-        mockMvc.perform(post("/api/v1/auth/login").from("10.0.0.1"))
-            .andExpect(status().isTooManyRequests)
-            .andExpect(header().string("RateLimit-Limit", "2"))
-            .andExpect(header().string("RateLimit-Remaining", "0"))
-            .andExpect(header().exists("Retry-After"))
-            .andExpect(jsonPath("$.code").value("RATE_LIMIT_EXCEEDED"))
-            .andExpect(jsonPath("$.traceId").isNotEmpty)
-    }
-
-    @Test
-    fun `forwarded IP headers are ignored unless explicitly trusted`() {
-        val mockMvc = mockMvc(properties(login = policy(capacity = 1), trustForwardedHeaders = false))
-
-        mockMvc.perform(
-            post("/api/v1/auth/login")
-                .from("10.0.0.1")
-                .header("X-Forwarded-For", "203.0.113.10"),
-        ).andExpect(status().isNotFound)
-
-        mockMvc.perform(
-            post("/api/v1/auth/login")
-                .from("10.0.0.1")
-                .header("X-Forwarded-For", "203.0.113.11"),
-        ).andExpect(status().isTooManyRequests)
-    }
-
-    @Test
-    fun `trusted forwarded IP headers create independent client buckets`() {
-        val mockMvc = mockMvc(properties(login = policy(capacity = 1), trustForwardedHeaders = true))
-
-        mockMvc.perform(
-            post("/api/v1/auth/login")
-                .from("10.0.0.1")
-                .header("X-Forwarded-For", "203.0.113.10"),
-        ).andExpect(status().isNotFound)
-
-        mockMvc.perform(
-            post("/api/v1/auth/login")
-                .from("10.0.0.1")
-                .header("X-Forwarded-For", "203.0.113.10"),
-        ).andExpect(status().isTooManyRequests)
-
-        mockMvc.perform(
-            post("/api/v1/auth/login")
-                .from("10.0.0.1")
-                .header("X-Forwarded-For", "203.0.113.11"),
-        ).andExpect(status().isNotFound)
+            .andExpect(header().doesNotExist("RateLimit-Limit"))
     }
 
     @Test
@@ -103,18 +54,49 @@ class RateLimitingFilterTest {
     }
 
     @Test
-    fun `administrative endpoints share one administrator bucket`() {
+    fun `BDI history is limited per authenticated user`() {
+        val mockMvc = mockMvc(properties(bdiHistory = policy(capacity = 1)))
+
+        mockMvc.perform(get("/api/v1/bdi/history").asUser("user-1"))
+            .andExpect(status().isNotFound)
+
+        mockMvc.perform(get("/api/v1/bdi/history").asUser("user-1"))
+            .andExpect(status().isTooManyRequests)
+            .andExpect(header().string("RateLimit-Limit", "1"))
+    }
+
+    @Test
+    fun `administrative BDI endpoints share one administrator bucket`() {
         val mockMvc = mockMvc(properties(administration = policy(capacity = 1)))
 
         mockMvc.perform(post("/api/v1/admin/bdi/refresh").asUser("admin-1", "ADMIN"))
             .andExpect(status().isNotFound)
 
-        mockMvc.perform(post("/api/v1/admin/users").asUser("admin-1", "ADMIN"))
+        mockMvc.perform(get("/api/v1/admin/bdi/refresh/job-1").asUser("admin-1", "ADMIN"))
             .andExpect(status().isTooManyRequests)
             .andExpect(header().string("RateLimit-Limit", "1"))
 
-        mockMvc.perform(post("/api/v1/admin/users").asUser("admin-2", "ADMIN"))
+        mockMvc.perform(post("/api/v1/admin/bdi/refresh").asUser("admin-2", "ADMIN"))
             .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `forwarded IP headers do not affect authenticated user buckets`() {
+        val mockMvc = mockMvc(properties(currentBdi = policy(capacity = 1), trustForwardedHeaders = true))
+
+        mockMvc.perform(
+            get("/api/v1/bdi/current")
+                .asUser("user-1")
+                .from("10.0.0.1")
+                .header("X-Forwarded-For", "203.0.113.10"),
+        ).andExpect(status().isNotFound)
+
+        mockMvc.perform(
+            get("/api/v1/bdi/current")
+                .asUser("user-1")
+                .from("10.0.0.2")
+                .header("X-Forwarded-For", "203.0.113.11"),
+        ).andExpect(status().isTooManyRequests)
     }
 
     private fun mockMvc(properties: BdiApiProperties): MockMvc {
@@ -138,8 +120,6 @@ class RateLimitingFilterTest {
     }
 
     private fun properties(
-        login: BdiApiProperties.RateLimit.Policy = policy(capacity = 100),
-        refresh: BdiApiProperties.RateLimit.Policy = policy(capacity = 100),
         currentBdi: BdiApiProperties.RateLimit.Policy = policy(capacity = 100),
         bdiHistory: BdiApiProperties.RateLimit.Policy = policy(capacity = 100),
         administration: BdiApiProperties.RateLimit.Policy = policy(capacity = 100),
@@ -149,8 +129,6 @@ class RateLimitingFilterTest {
             rateLimit =
                 BdiApiProperties.RateLimit(
                     trustForwardedHeaders = trustForwardedHeaders,
-                    login = login,
-                    refresh = refresh,
                     currentBdi = currentBdi,
                     bdiHistory = bdiHistory,
                     administration = administration,

@@ -14,10 +14,6 @@ class RateLimitIdentityResolver {
         properties: BdiApiProperties.RateLimit,
     ): String? =
         when (policy) {
-            RateLimitPolicy.LOGIN,
-            RateLimitPolicy.TOKEN_REFRESH,
-            -> "ip:${clientIp(request, properties)}"
-
             RateLimitPolicy.CURRENT_BDI,
             RateLimitPolicy.BDI_HISTORY,
             -> authenticatedUser()?.let { "user:$it" }
@@ -29,26 +25,6 @@ class RateLimitIdentityResolver {
                     null
                 }
         }
-
-    private fun clientIp(
-        request: HttpServletRequest,
-        properties: BdiApiProperties.RateLimit,
-    ): String {
-        if (properties.trustForwardedHeaders) {
-            request.getHeader("X-Forwarded-For")
-                ?.split(',')
-                ?.firstOrNull()
-                ?.trim()
-                ?.takeIf(String::isNotBlank)
-                ?.let { return it }
-
-            request.getHeader("X-Real-IP")
-                ?.trim()
-                ?.takeIf(String::isNotBlank)
-                ?.let { return it }
-        }
-        return request.remoteAddr ?: "unknown"
-    }
 
     private fun authenticatedUser(): String? {
         val authentication = SecurityContextHolder.getContext().authentication ?: return null
